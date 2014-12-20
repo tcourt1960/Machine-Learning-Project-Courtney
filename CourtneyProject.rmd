@@ -1,0 +1,74 @@
+---
+title: "Predicting BarBell Exercise Performance Quality - Machine Learning Project"
+author: "Tom Courtney"
+date: "Tuesday, December 20, 2014"
+output: html_document
+---
+
+```{r, echo=FALSE, message=FALSE}
+library("knitr")
+library("ggplot2", lib.loc="~/R/win-library/3.1")
+library("caret")
+library("e1071")
+library("rattle")
+library("randomForest")
+```
+##Cross Validation Strategy
+###Step #1.  Divide the training set into two parts
+###         70% training  30% testing
+### The Training data will be used to train the predictor.
+### The Testing data will be used to estimate the out of sample error.
+
+```{r}
+trainraw<-read.csv("pml-training.csv")
+
+#Variable Selection.  Selected all variables where the testing data set showed valid value.
+columns_to_use<-c(8:11,37:49,60:68,84:86,102,113:124,140,151:160)
+
+##Separate the training set into 'training' and 'testing' sets.  The Training Set will be used to train the fit.  The testing will be used to estimate the Out of sample error.
+
+dataTOuse<-trainraw[columns_to_use]
+inTrain <- createDataPartition(y=dataTOuse$classe, p=0.70, list=FALSE)
+training <- dataTOuse[inTrain,]
+testing<-dataTOuse[-inTrain,]
+```
+
+
+###Selected the Random Forest Machine Learning training program
+```{r}
+fit<-randomForest(training[,-53],training[,53],prox=TRUE,importance=TRUE)
+```
+
+###Now, find out how accurate the prediction is for the cross-validation data.ie., the portion of the training data set aside for cross-validation.
+```{r}
+ans_insample<-predict(fit,training)
+confusionMatrix(ans_insample, training$classe)
+```
+
+###The confusion matrix shows a very excellent fit of the training data to the training prediction.  The Training data is fit perfectly! 
+
+
+###Now for the real test!  How well does the prediction work on the out of sample test data?
+### This is the 30% of the training data which was set aside to obtain an out of sample error estimate.
+```{r}
+ans_outofsample<-predict(fit, testing)
+confusionMatrix(ans_outofsample,testing$classe)
+```
+###Not bad! The Out of Sample accuracy is very high, 99.5%
+
+###Which predictor variables are the most important?
+
+```{r}
+varImpPlot(fit)
+```
+
+###The two most important variables are roll_belt and yaw_belt.  Let's plot these two and color by Classe.
+
+```{r}
+qplot(roll_belt,yaw_belt,data = testing,colour=classe)
+```
+
+###Here one can visually see how these top two parameters are already beginning to segment the classe variable.  
+
+###In Summary, this project has shown that xyz and gyro sensors combined with tree based Machine Learning can very accurately predict the quality of performing ballbar exercises.
+
